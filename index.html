@@ -31,7 +31,7 @@
             display: grid;
             grid-template-columns: repeat(3, 90px);
             grid-template-rows: repeat(3, 80px);
-            gap: 7px;
+            gap: 6px;
             padding: 15px;
             /* 位置調整：向下移動 */
             margin-top: 52vh; /* 這裡控制上下位置，55vh 約為螢幕中下段 */
@@ -95,7 +95,7 @@
 
             const ctx = canvas.getContext('2d');
             canvas.width = 90;
-            canvas.height = 90;
+            canvas.height = 80;
 
             // 繪製遮罩
             const gradient = ctx.createLinearGradient(0, 0, 90, 90);

@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2025 新年刮刮樂</title>
+        <meta property="og:title" content="點我刮大獎！財神到刮刮樂">
+    <meta property="og:description" content="馬上來刮刮,財神到你家！">
+    <meta property="og:image" content="https://hsiao523.github.io/happynewyear9/background.jpg">
+
+    <title>財神到刮刮樂</title>
     <style>
         * {
             box-sizing: border-box;
@@ -16,27 +20,27 @@
             padding: 0;
             width: 100vw;
             height: 100vh;
-            /* 套用你的背景圖 */
             background: url('https://hsiao523.github.io/happynewyear9/background.jpg') no-repeat center center;
             background-size: cover;
             display: flex;
-            align-items: flex-start; /* 改為從頂部開始計算，方便精確下移 */
+            align-items: flex-start;
             justify-content: center;
             overflow: hidden;
             touch-action: none;
+            font-family: "Microsoft JhengHei", sans-serif;
         }
 
-        /* 九宮格容器 */
+        /* 九宮格容器 - 請根據需要修改 margin-top */
         .grid-container {
             display: grid;
             grid-template-columns: repeat(3, 90px);
             grid-template-rows: repeat(3, 80px);
             gap: 6px;
             padding: 15px;
-            /* 位置調整：向下移動 */
-            margin-top: 52vh; /* 這裡控制上下位置，55vh 約為螢幕中下段 */
+            margin-top: 52vh; /* 您可以自己微調此數值 */
             background: rgba(0, 0, 0, 0.1); 
             border-radius: 15px;
+            position: relative;
         }
 
         .scratch-card {
@@ -48,7 +52,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
+            font-size: 2.2rem;
             box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
         }
 
@@ -64,63 +68,148 @@
             transition: opacity 0.4s ease;
             z-index: 2;
         }
+
+        /* 賀詞彈窗樣式 */
+        #result-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            z-index: 100;
+            text-align: center;
+            width: 80%;
+            max-width: 300px;
+            border: 4px solid #b71c1c;
+        }
+
+        #result-modal h2 {
+            color: #b71c1c;
+            margin-top: 0;
+        }
+
+        #result-modal p {
+            font-size: 1.2rem;
+            font-weight: bold;
+            line-height: 1.6;
+        }
+
+        .modal-btn {
+            background: #b71c1c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 1rem;
+        }
     </style>
 </head>
 <body>
 
     <div class="grid-container" id="grid"></div>
 
+    <div id="result-modal">
+        <h2 id="modal-title">恭喜！</h2>
+        <p id="modal-text"></p>
+        <button class="modal-btn" onclick="closeModal()">再玩一次</button>
+    </div>
+
     <script>
-        const symbols = ['💰', '🧧', '💎', '🍊', '💰', '🧧', '✨', '🍍', '🧨'];
+        const symbolsMap = {
+            '💰': '恭喜你，今年賺大錢！',
+            '🧧': '恭喜你，會得大紅包！',
+            '💎': '太棒了，金銀珠寶滿厝間！',
+            '🍊': '大吉大利發大財！',
+            '✨': '今年運勢閃亮亮，好運一直來！',
+            '🍍': '今年會年頭旺到年尾！',
+            '🧨': '會中大獎，鞕炮響不停！'
+        };
+
         const gridElement = document.getElementById('grid');
-        let clearedCount = 0;
-        let canReset = false; // 新增一個狀態鎖，確保全部刮完才能觸控重置
+        const modal = document.getElementById('result-modal');
+        const modalText = document.getElementById('modal-text');
         
+        let clearedCount = 0;
+        let winningSymbol = '';
+
+        // 所有連線的可能性索引 (九宮格 0-8)
+        const lines = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // 橫
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // 直
+            [0, 4, 8], [2, 4, 6]             // 斜
+        ];
+
         function initGame() {
             gridElement.innerHTML = '';
             clearedCount = 0;
-            canReset = false; // 重置鎖定狀態
-            const shuffled = [...symbols].sort(() => Math.random() - 0.5);
+            modal.style.display = 'none';
+
+            // 1. 隨機選一個符號當連線符號
+            const keys = Object.keys(symbolsMap);
+            winningSymbol = keys[Math.floor(Math.random() * keys.length)];
+
+            // 2. 隨機選一條線連起來
+            const winLine = lines[Math.floor(Math.random() * lines.length)];
+            
+            // 3. 準備九個格子的內容
+            let board = new Array(9).fill(null);
+            winLine.forEach(idx => board[idx] = winningSymbol);
+
+            // 4. 其他格子隨機填入 (且避免產生第二條線，這裡簡單處理填入不同符號)
             for (let i = 0; i < 9; i++) {
-                createScratchCard(shuffled[i]);
+                if (board[i] === null) {
+                    let randomSym;
+                    do {
+                        randomSym = keys[Math.floor(Math.random() * keys.length)];
+                    } while (randomSym === winningSymbol); // 避免干擾視覺，非線格子不用連線符號
+                    board[i] = randomSym;
+                }
             }
+
+            // 5. 生成格子
+            board.forEach(sym => createScratchCard(sym));
         }
-        
+
         function createScratchCard(symbol) {
             const card = document.createElement('div');
             card.className = 'scratch-card';
             card.innerHTML = `<span>${symbol}</span>`;
-        
+
             const canvas = document.createElement('canvas');
             card.appendChild(canvas);
             gridElement.appendChild(card);
-        
+
             const ctx = canvas.getContext('2d');
             canvas.width = 90;
-            canvas.height = 90;
-        
+            canvas.height = 80;
+
             const gradient = ctx.createLinearGradient(0, 0, 90, 90);
             gradient.addColorStop(0, '#C0C0C0');
             gradient.addColorStop(1, '#A9A9A9');
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, 90, 90);
-        
+
             let isDrawing = false;
             let isRemoved = false;
-        
+
             function scratch(e) {
                 if (!isDrawing || isRemoved) return;
                 const rect = canvas.getBoundingClientRect();
                 const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
                 const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-        
+
                 ctx.globalCompositeOperation = 'destination-out';
                 ctx.beginPath();
                 ctx.arc(x, y, 18, 0, Math.PI * 2);
                 ctx.fill();
                 checkScratchPercent(canvas, ctx);
             }
-        
+
             function checkScratchPercent(canvas, ctx) {
                 if (isRemoved) return;
                 const imageData = ctx.getImageData(0, 0, 90, 90);
@@ -135,14 +224,13 @@
                     canvas.style.opacity = '0';
                     clearedCount++;
                     setTimeout(() => canvas.remove(), 400);
-        
-                    // 當 9 格都刮完時
+
                     if (clearedCount === 9) {
-                        canReset = true; // 開啟重置權限
+                        showResult();
                     }
                 }
             }
-        
+
             canvas.addEventListener('mousedown', () => isDrawing = true);
             canvas.addEventListener('touchstart', (e) => { isDrawing = true; e.preventDefault(); });
             window.addEventListener('mouseup', () => isDrawing = false);
@@ -150,20 +238,18 @@
             canvas.addEventListener('mousemove', scratch);
             canvas.addEventListener('touchmove', (e) => { scratch(e); e.preventDefault(); });
         }
-        
-        // 監聽整個頁面的點擊/觸碰事件
-        document.body.addEventListener('click', () => {
-            if (canReset) {
-                initGame();
-            }
-        });
-        
-        document.body.addEventListener('touchstart', () => {
-            if (canReset) {
-                initGame();
-            }
-        });
-        
+
+        function showResult() {
+            modalText.innerText = symbolsMap[winningSymbol];
+            setTimeout(() => {
+                modal.style.display = 'block';
+            }, 500);
+        }
+
+        function closeModal() {
+            initGame();
+        }
+
         initGame();
     </script>
 </body>

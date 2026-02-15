@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>幸運九宮格刮刮樂</title>
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        :root {
+            --bg-color: #ff4d4d;
+            --card-bg: #fff3e0;
+            --accent-color: #ffd700;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-touch-callout: none; /* 禁止長按彈出選單 */
+            -webkit-user-select: none;   /* 禁止選取文字 */
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle, #ff6b6b 20%, transparent 20%),
+                              radial-gradient(circle, #ff6b6b 20%, transparent 20%);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: "Microsoft JhengHei", sans-serif;
+            overflow: hidden; /* 防止頁面滾動回彈 */
+        }
+
+        h1 {
+            color: var(--accent-color);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        /* 九宮格容器 */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 10px;
+            padding: 15px;
+            background: #b71c1c;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+
+        .scratch-card {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            overflow: hidden;
+        }
+
+        /* 畫布層 (刮刮樂遮罩) */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            touch-action: none; /* 重要：防止觸控時頁面跟著捲動 */
+            transition: opacity 0.5s ease;
+        }
+
+        /* 按鈕樣式 */
+        .btn-reset {
+            margin-top: 30px;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #b71c1c;
+            background: var(--accent-color);
+            border: none;
+            border-radius: 50px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-reset:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>✨ 幸運刮刮樂 ✨</h1>
+
+    <div class="grid-container" id="grid">
+        </div>
+
+    <button class="btn-reset" onclick="initGame()">再刮一張</button>
+
+    <script>
+        const symbols = ['💰', '🎁', '💎', '❌', '💰', '🎁', '💎', '🔥', '✨'];
+        const gridElement = document.getElementById('grid');
+
+        function initGame() {
+            gridElement.innerHTML = '';
+            // 打亂獎項
+            const shuffled = [...symbols].sort(() => Math.random() - 0.5);
+
+            for (let i = 0; i < 9; i++) {
+                createScratchCard(shuffled[i]);
+            }
+        }
+
+        function createScratchCard(symbol) {
+            const card = document.createElement('div');
+            card.className = 'scratch-card';
+            card.innerHTML = `<span>${symbol}</span>`;
+
+            const canvas = document.createElement('canvas');
+            card.appendChild(canvas);
+            gridElement.appendChild(card);
+
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const width = 100;
+            const height = 100;
+            canvas.width = width;
+            canvas.height = height;
+
+            // 繪製灰色遮罩
+            ctx.fillStyle = '#C0C0C0'; // 銀色遮罩
+            ctx.fillRect(0, 0, width, height);
+            
+            // 加上一點紋理感
+            ctx.fillStyle = '#A9A9A9';
+            for(let i=0; i<100; i++) {
+                ctx.fillRect(Math.random()*width, Math.random()*height, 2, 2);
+            }
+
+            let isDrawing = false;
+
+            // 刮除邏輯
+            function scratch(e) {
+                if (!isDrawing) return;
+
+                // 取得觸控或滑鼠相對於 canvas 的座標
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+                const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+
+                ctx.globalCompositeOperation = 'destination-out'; // 設定為透明模式
+                ctx.beginPath();
+                ctx.arc(x, y, 15, 0, Math.PI * 2);
+                ctx.fill();
+
+                checkScratchPercent(canvas, ctx);
+            }
+
+            // 計算刮開面積
+            function checkScratchPercent(canvas, ctx) {
+                const imageData = ctx.getImageData(0, 0, width, height);
+                const pixels = imageData.data;
+                let transparentPixels = 0;
+
+                for (let i = 0; i < pixels.length; i += 4) {
+                    if (pixels[i + 3] < 128) transparentPixels++;
+                }
+
+                const percent = (transparentPixels / (width * height)) * 100;
+                if (percent > 60) {
+                    canvas.style.opacity = '0';
+                    setTimeout(() => canvas.remove(), 500); // 面積過半後自動消失
+                }
+            }
+
+            // 事件監聽
+            canvas.addEventListener('mousedown', () => isDrawing = true);
+            canvas.addEventListener('touchstart', () => isDrawing = true);
+            window.addEventListener('mouseup', () => isDrawing = false);
+            window.addEventListener('touchend', () => isDrawing = false);
+            canvas.addEventListener('mousemove', scratch);
+            canvas.addEventListener('touchmove', scratch);
+        }
+
+        // 初始化遊戲
+        initGame();
+
+        // 防止手機端橡皮筋回彈效果
+        document.body.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html>

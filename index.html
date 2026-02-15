@@ -74,52 +74,53 @@
         const symbols = ['💰', '🧧', '💎', '🍊', '💰', '🧧', '✨', '🍍', '🧨'];
         const gridElement = document.getElementById('grid');
         let clearedCount = 0;
-
+        let canReset = false; // 新增一個狀態鎖，確保全部刮完才能觸控重置
+        
         function initGame() {
             gridElement.innerHTML = '';
             clearedCount = 0;
+            canReset = false; // 重置鎖定狀態
             const shuffled = [...symbols].sort(() => Math.random() - 0.5);
             for (let i = 0; i < 9; i++) {
                 createScratchCard(shuffled[i]);
             }
         }
-
+        
         function createScratchCard(symbol) {
             const card = document.createElement('div');
             card.className = 'scratch-card';
             card.innerHTML = `<span>${symbol}</span>`;
-
+        
             const canvas = document.createElement('canvas');
             card.appendChild(canvas);
             gridElement.appendChild(card);
-
+        
             const ctx = canvas.getContext('2d');
             canvas.width = 90;
-            canvas.height = 80;
-
-            // 繪製遮罩
+            canvas.height = 90;
+        
             const gradient = ctx.createLinearGradient(0, 0, 90, 90);
             gradient.addColorStop(0, '#C0C0C0');
             gradient.addColorStop(1, '#A9A9A9');
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, 90, 90);
-
+        
             let isDrawing = false;
             let isRemoved = false;
-
+        
             function scratch(e) {
                 if (!isDrawing || isRemoved) return;
                 const rect = canvas.getBoundingClientRect();
                 const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
                 const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-
+        
                 ctx.globalCompositeOperation = 'destination-out';
                 ctx.beginPath();
                 ctx.arc(x, y, 18, 0, Math.PI * 2);
                 ctx.fill();
                 checkScratchPercent(canvas, ctx);
             }
-
+        
             function checkScratchPercent(canvas, ctx) {
                 if (isRemoved) return;
                 const imageData = ctx.getImageData(0, 0, 90, 90);
@@ -134,14 +135,14 @@
                     canvas.style.opacity = '0';
                     clearedCount++;
                     setTimeout(() => canvas.remove(), 400);
-
-                    // 如果 9 格都刮開了，3 秒後重置遊戲
+        
+                    // 當 9 格都刮完時
                     if (clearedCount === 9) {
-                        setTimeout(initGame, 3000);
+                        canReset = true; // 開啟重置權限
                     }
                 }
             }
-
+        
             canvas.addEventListener('mousedown', () => isDrawing = true);
             canvas.addEventListener('touchstart', (e) => { isDrawing = true; e.preventDefault(); });
             window.addEventListener('mouseup', () => isDrawing = false);
@@ -149,7 +150,20 @@
             canvas.addEventListener('mousemove', scratch);
             canvas.addEventListener('touchmove', (e) => { scratch(e); e.preventDefault(); });
         }
-
+        
+        // 監聽整個頁面的點擊/觸碰事件
+        document.body.addEventListener('click', () => {
+            if (canReset) {
+                initGame();
+            }
+        });
+        
+        document.body.addEventListener('touchstart', () => {
+            if (canReset) {
+                initGame();
+            }
+        });
+        
         initGame();
     </script>
 </body>

@@ -3,22 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta property="og:title" content="點我刮大獎！財神到刮刮樂">
-    <meta property="og:description" content="快來看看你的手氣，財神到你家！">
-    <meta property="og:image" content="https://hsiao523.github.io/happynewyear9/background.jpg">
-    <title>財神到刮刮樂</title>
+    <title>2025 新年快樂刮刮樂</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root {
-            --bg-color: #ff4d4d;
-            --card-bg: #fff3e0;
             --accent-color: #ffd700;
         }
 
         * {
             box-sizing: border-box;
-            -webkit-touch-callout: none; /* 禁止長按彈出選單 */
-            -webkit-user-select: none;   /* 禁止選取文字 */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
         }
 
         body {
@@ -26,51 +21,51 @@
             padding: 0;
             width: 100vw;
             height: 100vh;
-            background-color: var(--bg-color);
-            background-image: radial-gradient(circle, #ff6b6b 20%, transparent 20%),
-                              radial-gradient(circle, #ff6b6b 20%, transparent 20%);
-            background-size: 30px 30px;
-            background-position: 0 0, 15px 15px;
+            /* 使用你的圖片作為背景 */
+            background: url('https://hsiao523.github.io/happynewyear9/background.jpg') no-repeat center center;
+            background-size: cover;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             font-family: "Microsoft JhengHei", sans-serif;
-            overflow: hidden; /* 防止頁面滾動回彈 */
+            overflow: hidden;
         }
 
+        /* 標題調整，適配背景圖位置 */
         h1 {
             color: var(--accent-color);
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-top: -50px; /* 向上微調以避開背景文字 */
             margin-bottom: 20px;
+            font-size: 1.8rem;
         }
 
-        /* 九宮格容器 */
+        /* 九宮格容器 - 精確對齊背景中央深色區 */
         .grid-container {
             display: grid;
-            grid-template-columns: repeat(3, 100px);
-            grid-template-rows: repeat(3, 100px);
-            gap: 10px;
+            grid-template-columns: repeat(3, 90px);
+            grid-template-rows: repeat(3, 90px);
+            gap: 12px;
             padding: 15px;
-            background: #b71c1c;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+            background: rgba(0, 0, 0, 0.2); /* 半透明底色，增加層次感 */
+            border-radius: 15px;
+            backdrop-filter: blur(2px);
         }
 
         .scratch-card {
             position: relative;
-            width: 100px;
-            height: 100px;
-            background: var(--card-bg);
-            border-radius: 8px;
+            width: 90px;
+            height: 90px;
+            background: #fff3e0;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.5rem;
-            overflow: hidden;
+            font-size: 2rem;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
         }
 
-        /* 畫布層 (刮刮樂遮罩) */
         canvas {
             position: absolute;
             top: 0;
@@ -78,48 +73,41 @@
             width: 100%;
             height: 100%;
             cursor: crosshair;
-            touch-action: none; /* 重要：防止觸控時頁面跟著捲動 */
-            transition: opacity 0.5s ease;
+            touch-action: none;
+            border-radius: 10px;
+            transition: opacity 0.4s ease;
         }
 
-        /* 按鈕樣式 */
         .btn-reset {
-            margin-top: 30px;
-            padding: 12px 30px;
-            font-size: 1.2rem;
+            margin-top: 40px;
+            padding: 10px 40px;
+            font-size: 1.1rem;
             font-weight: bold;
-            color: #b71c1c;
-            background: var(--accent-color);
-            border: none;
+            color: #830000;
+            background: linear-gradient(180deg, #fff2ac 0%, #ffd700 100%);
+            border: 2px solid #b71c1c;
             border-radius: 50px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             cursor: pointer;
-            transition: transform 0.2s;
         }
 
-        .btn-reset:active {
-            transform: scale(0.95);
-        }
+        .btn-reset:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
 
-    <h1>✨ 幸運刮刮樂 ✨</h1>
+    <div class="grid-container" id="grid"></div>
 
-    <div class="grid-container" id="grid">
-        </div>
-
-    <button class="btn-reset" onclick="initGame()">再刮一張</button>
+    <button class="btn-reset" onclick="initGame()">重新刮獎</button>
 
     <script>
-        const symbols = ['💰', '🎁', '💎', '❌', '💰', '🎁', '💎', '🔥', '✨'];
+        // 定義獎項清單
+        const symbols = ['💰', '🧧', '💎', '🍊', '💰', '🧧', '✨', '🍍', '🧨'];
         const gridElement = document.getElementById('grid');
 
         function initGame() {
             gridElement.innerHTML = '';
-            // 打亂獎項
             const shuffled = [...symbols].sort(() => Math.random() - 0.5);
-
             for (let i = 0; i < 9; i++) {
                 createScratchCard(shuffled[i]);
             }
@@ -134,74 +122,61 @@
             card.appendChild(canvas);
             gridElement.appendChild(card);
 
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            const width = 100;
-            const height = 100;
-            canvas.width = width;
-            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            canvas.width = 90;
+            canvas.height = 90;
 
-            // 繪製灰色遮罩
-            ctx.fillStyle = '#C0C0C0'; // 銀色遮罩
-            ctx.fillRect(0, 0, width, height);
+            // 繪製高級感金屬銀色遮罩
+            const gradient = ctx.createLinearGradient(0, 0, 90, 90);
+            gradient.addColorStop(0, '#C0C0C0');
+            gradient.addColorStop(0.5, '#E0E0E0');
+            gradient.addColorStop(1, '#A9A9A9');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 90, 90);
             
-            // 加上一點紋理感
-            ctx.fillStyle = '#A9A9A9';
-            for(let i=0; i<100; i++) {
-                ctx.fillRect(Math.random()*width, Math.random()*height, 2, 2);
+            // 加上細微閃點
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            for(let i=0; i<30; i++) {
+                ctx.fillRect(Math.random()*90, Math.random()*90, 1, 1);
             }
 
             let isDrawing = false;
 
-            // 刮除邏輯
             function scratch(e) {
                 if (!isDrawing) return;
-
-                // 取得觸控或滑鼠相對於 canvas 的座標
                 const rect = canvas.getBoundingClientRect();
                 const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
                 const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
 
-                ctx.globalCompositeOperation = 'destination-out'; // 設定為透明模式
+                ctx.globalCompositeOperation = 'destination-out';
                 ctx.beginPath();
-                ctx.arc(x, y, 15, 0, Math.PI * 2);
+                ctx.arc(x, y, 18, 0, Math.PI * 2);
                 ctx.fill();
-
                 checkScratchPercent(canvas, ctx);
             }
 
-            // 計算刮開面積
             function checkScratchPercent(canvas, ctx) {
-                const imageData = ctx.getImageData(0, 0, width, height);
+                const imageData = ctx.getImageData(0, 0, 90, 90);
                 const pixels = imageData.data;
                 let transparentPixels = 0;
-
                 for (let i = 0; i < pixels.length; i += 4) {
-                    if (pixels[i + 3] < 128) transparentPixels++;
+                    if (pixels[i + 3] < 150) transparentPixels++;
                 }
-
-                const percent = (transparentPixels / (width * height)) * 100;
-                if (percent > 60) {
+                if ((transparentPixels / (90 * 90)) > 0.55) {
                     canvas.style.opacity = '0';
-                    setTimeout(() => canvas.remove(), 500); // 面積過半後自動消失
+                    setTimeout(() => canvas.remove(), 400);
                 }
             }
 
-            // 事件監聽
             canvas.addEventListener('mousedown', () => isDrawing = true);
-            canvas.addEventListener('touchstart', () => isDrawing = true);
+            canvas.addEventListener('touchstart', (e) => { isDrawing = true; e.preventDefault(); });
             window.addEventListener('mouseup', () => isDrawing = false);
             window.addEventListener('touchend', () => isDrawing = false);
             canvas.addEventListener('mousemove', scratch);
-            canvas.addEventListener('touchmove', scratch);
+            canvas.addEventListener('touchmove', (e) => { scratch(e); e.preventDefault(); });
         }
 
-        // 初始化遊戲
         initGame();
-
-        // 防止手機端橡皮筋回彈效果
-        document.body.addEventListener('touchmove', function(e) {
-            e.preventDefault();
-        }, { passive: false });
     </script>
 </body>
 </html>

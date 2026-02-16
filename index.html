@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta property="og:title" content="點我刮大獎！財神點名刮刮樂">
-    <meta property="og:description" content="看看哪個開運小物出現最多次？">
+    <meta property="og:description" content="馬上刮,馬上中">
     <meta property="og:image" content="https://hsiao523.github.io/happynewyear9/title.jpg">
     <title>財神點名刮刮樂</title>
-    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -20,25 +19,23 @@
             padding: 0;
             width: 100vw;
             height: 100vh;
-            /* 背景圖設定 */
             background: url('https://hsiao523.github.io/happynewyear9/background.jpg') no-repeat center center;
             background-size: cover;
             display: flex;
             align-items: flex-start;
             justify-content: center;
             overflow: hidden;
-            touch-action: none; /* 防止手機下滑重整 */
+            touch-action: none;
             font-family: "Microsoft JhengHei", sans-serif;
         }
 
-        /* 九宮格容器 */
         .grid-container {
             display: grid;
             grid-template-columns: repeat(3, 90px);
             grid-template-rows: repeat(3, 80px);
             gap: 6px;
             padding: 15px;
-            margin-top: 52vh; /* 控制垂直位置 */
+            margin-top: 52vh;
             background: rgba(0, 0, 0, 0.1); 
             border-radius: 15px;
             position: relative;
@@ -57,7 +54,6 @@
             box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
         }
 
-        /* 金粉特效層 */
         .particle-canvas {
             position: absolute;
             top: 0;
@@ -68,7 +64,6 @@
             z-index: 3;
         }
 
-        /* 刮刮樂銀漆層 */
         .scratch-canvas {
             position: absolute;
             top: 0;
@@ -82,7 +77,6 @@
             z-index: 2;
         }
 
-        /* 結果彈窗 */
         #result-modal {
             display: none;
             position: fixed;
@@ -101,26 +95,8 @@
         }
 
         #modal-title { color: #d32f2f; font-size: 1.5rem; margin-bottom: 10px; font-weight: bold; }
-        #modal-text { font-size: 1.3rem; font-weight: bold; line-height: 1.6; color: #333; margin-bottom: 20px; }
-        
-        /* 按鈕共用樣式 */
-        .modal-btn { 
-            color: white; 
-            border: none; 
-            padding: 12px 25px; 
-            border-radius: 50px; 
-            font-size: 1.1rem; 
-            cursor: pointer; 
-            font-weight: bold; 
-            margin: 5px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        }
-
-        /* 再玩一次按鈕 (紅色) */
-        .btn-restart { background: #d32f2f; }
-        
-        /* 分享按鈕 (LINE 綠色) */
-        .btn-share { background: #06c755; }
+        #modal-text { font-size: 1.3rem; font-weight: bold; line-height: 1.6; color: #333; }
+        .modal-btn { background: #d32f2f; color: white; border: none; padding: 12px 25px; border-radius: 50px; margin-top: 20px; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -131,19 +107,12 @@
         <div id="modal-emoji" style="font-size: 3.5rem; margin-bottom: 10px;">🎊</div>
         <div id="modal-title">財神報喜</div>
         <div id="modal-text"></div>
-        <div id="btn-container">
-            <button class="modal-btn btn-restart" onclick="closeModal()">再玩一次</button>
-            </div>
+        <button class="modal-btn" onclick="closeModal()">再玩一次</button>
     </div>
 
     <script>
-        // ==========================================
-        // ⚠️ 重要：請在此填入您的 LIFF ID
-        // ==========================================
-        const MY_LIFF_ID = "2009138612-UvmGdFrs"; 
-        // 例如: const MY_LIFF_ID = "1657801234-AbCdEfGh";
-
-        // 一般賀詞 (只寫後半段，程式會自動加上 "刮中N個...")
+        // 【設定區 1】一般賀詞 (只寫後半段祝賀語)
+        // 程式會自動在前面加上 "刮中 (n) 個 (符號)，"
         const normalMap = {
             '💰': "今年賺大錢！",
             '🧧': "今年紅利領不完！",
@@ -154,7 +123,7 @@
             '🧨': "天天中大獎，鞕炮響不停！"
         };
 
-        // 終極賀詞 (9個全中)
+        // 【設定區 2】9 個全中時的特別賀詞 (不受影響，顯示完整句子)
         const superMap = {
             '💰': "【終極財神】9個💰全開！富甲天下！",
             '🧧': "【紅包之王】9個🧧全開！財庫滿盈！",
@@ -172,75 +141,7 @@
         let clearedCount = 0;
         let winner = { symbol: '', count: 0 };
 
-        // --- LIFF 初始化 ---
-        function initializeLiff() {
-            liff.init({ liffId: MY_LIFF_ID })
-                .then(() => {
-                    // 若未登入，則執行登入
-                    if (!liff.isLoggedIn()) {
-                        liff.login();
-                    }
-                })
-                .catch((err) => {
-                    console.error('LIFF Init failed:', err);
-                });
-        }
-
-        // --- LINE 分享功能 ---
-        function sendShare() {
-            if (liff.isApiAvailable('shareTargetPicker')) {
-                liff.shareTargetPicker([
-                    {
-                        'type': 'flex',
-                        'altText': '財神爺發紅包啦！快來刮刮看！',
-                        'contents': {
-                            'type': 'bubble',
-                            'hero': {
-                                'type': 'image',
-                                'url': 'https://hsiao523.github.io/happynewyear9/title.jpg',
-                                'size': 'full',
-                                'aspectRatio': '20:13',
-                                'aspectMode': 'cover',
-                                'action': { 'type': 'uri', 'uri': 'https://liff.line.me/' + MY_LIFF_ID }
-                            },
-                            'body': {
-                                'type': 'box',
-                                'layout': 'vertical',
-                                'contents': [
-                                    { 'type': 'text', 'text': '💰 財神點名刮刮樂', 'weight': 'bold', 'size': 'xl', 'color': '#d32f2f' },
-                                    { 'type': 'text', 'text': `我剛剛刮中了 ${winner.count} 個 ${winner.symbol}！\n快來看看你能刮中什麼？`, 'wrap': true, 'color': '#666666', 'margin': 'md' }
-                                ]
-                            },
-                            'footer': {
-                                'type': 'box',
-                                'layout': 'vertical',
-                                'spacing': 'sm',
-                                'contents': [
-                                    {
-                                        'type': 'button',
-                                        'style': 'primary',
-                                        'height': 'sm',
-                                        'action': { 'type': 'uri', 'label': '馬上刮一張', 'uri': 'https://liff.line.me/' + MY_LIFF_ID },
-                                        'color': '#d32f2f'
-                                    }
-                                ]
-                            }
-                        }
-                    }
-                ])
-                .then((res) => {
-                    if (res) console.log('分享成功');
-                })
-                .catch((err) => {
-                    console.log('分享失敗', err);
-                    alert('分享功能只能在 LINE App 中使用喔！');
-                });
-            } else {
-                alert('請在 LINE App 中開啟此遊戲才能分享喔！');
-            }
-        }
-
-        // --- 金粉粒子特效類別 ---
+        // 金粉粒子特效
         class Particle {
             constructor(x, y) {
                 this.x = x; this.y = y;
@@ -254,18 +155,13 @@
             draw(ctx) { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
         }
 
-        // --- 遊戲初始化 ---
         function initGame() {
             gridElement.innerHTML = '';
             clearedCount = 0;
             modal.style.display = 'none';
 
-            // 移除舊的分享按鈕(如果有)，避免重複
-            const oldShareBtn = document.getElementById('share-btn');
-            if (oldShareBtn) oldShareBtn.remove();
-
             const keys = Object.keys(normalMap);
-            // 設定數量機率：5, 6, 8, 或 9
+            // 設定機率：隨機決定這次會出現幾個相同符號 (5, 6, 8, 或 9)
             const countsToPick = [5, 6, 8, 9];
             const targetCount = countsToPick[Math.floor(Math.random() * countsToPick.length)];
             const targetSymbol = keys[Math.floor(Math.random() * keys.length)];
@@ -273,6 +169,7 @@
             winner = { symbol: targetSymbol, count: targetCount };
 
             let board = new Array(9).fill(null);
+            // 隨機分配位置
             let indices = [0,1,2,3,4,5,6,7,8].sort(() => Math.random() - 0.5);
             
             // 填入中獎符號
@@ -280,7 +177,7 @@
                 board[indices[i]] = targetSymbol;
             }
 
-            // 填入雜訊符號
+            // 填入其他雜訊符號
             for(let i=0; i<9; i++) {
                 if(board[i] === null) {
                     let randomSym;
@@ -293,7 +190,6 @@
             board.forEach(sym => createScratchCard(sym));
         }
 
-        // --- 建立刮刮卡 ---
         function createScratchCard(symbol) {
             const card = document.createElement('div');
             card.className = 'scratch-card';
@@ -312,7 +208,7 @@
             gridElement.appendChild(card);
 
             pCanvas.width = sCanvas.width = 90;
-            pCanvas.height = 80;
+            pCanvas.height = sCanvas.height = 80;
 
             const gradient = sCtx.createLinearGradient(0, 0, 90, 80);
             gradient.addColorStop(0, '#C0C0C0');
@@ -371,40 +267,26 @@
             sCanvas.addEventListener('touchmove', (e) => { scratch(e); e.preventDefault(); });
         }
 
-        // --- 顯示結果 ---
+        // 【重點修改區】：顯示結果的邏輯
         function showResult() {
             const emojiEl = document.getElementById('modal-emoji');
             
             if (winner.count === 9) {
-                // 終極賀詞
+                // 9 個全中：使用特別賀詞 (文字直接取自 superMap)
                 modalText.innerText = superMap[winner.symbol];
                 emojiEl.innerText = "🧧";
             } else {
-                // 一般賀詞：自動組合 "刮中N個..."
-                modalText.innerText = `刮中 ${winner.count} 個 ${winner.symbol}，${normalMap[winner.symbol]}`;
+                // 一般中獎 (5, 6, 8 個)：
+                // 這裡會自動組合成：「刮中 (數量) 個 (符號)，(吉祥話)」
+                modalText.innerText = `刮中${winner.count}個${winner.symbol}，${normalMap[winner.symbol]}`;
                 emojiEl.innerText = "🎊";
-            }
-            
-            // 動態加入分享按鈕 (如果還沒有的話)
-            if (!document.getElementById('share-btn')) {
-                const shareBtn = document.createElement('button');
-                shareBtn.id = 'share-btn';
-                shareBtn.className = 'modal-btn btn-share';
-                shareBtn.innerText = '分享給好友';
-                shareBtn.onclick = sendShare;
-                document.getElementById('btn-container').appendChild(shareBtn);
             }
             
             setTimeout(() => { modal.style.display = 'block'; }, 500);
         }
 
         function closeModal() { initGame(); }
-
-        // 啟動流程
-        window.onload = function() {
-            initializeLiff();
-            initGame();
-        };
+        initGame();
     </script>
 </body>
 </html>

@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <meta property="og:title" content="點我刮大獎！財神到刮刮樂">
+    <meta property="og:title" content="點我刮大獎！財神到刮刮樂">
     <meta property="og:description" content="馬上來刮刮,財神到你家！">
     <meta property="og:image" content="https://hsiao523.github.io/happynewyear9/title.jpg">
-
     <title>財神到刮刮樂</title>
     <style>
         * {
@@ -30,14 +29,13 @@
             font-family: "Microsoft JhengHei", sans-serif;
         }
 
-        /* 九宮格容器 - 請根據需要修改 margin-top */
         .grid-container {
             display: grid;
             grid-template-columns: repeat(3, 90px);
             grid-template-rows: repeat(3, 80px);
             gap: 6px;
             padding: 15px;
-            margin-top: 52vh; /* 您可以自己微調此數值 */
+            margin-top: 52vh;
             background: rgba(0, 0, 0, 0.1); 
             border-radius: 15px;
             position: relative;
@@ -56,7 +54,19 @@
             box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
         }
 
-        canvas {
+        /* 底部畫布：負責粒子特效 */
+        .particle-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* 不干擾觸控 */
+            z-index: 3;
+        }
+
+        /* 頂部畫布：負責刮除遮罩 */
+        .scratch-canvas {
             position: absolute;
             top: 0;
             left: 0;
@@ -69,7 +79,6 @@
             z-index: 2;
         }
 
-        /* 賀詞彈窗樣式 */
         #result-modal {
             display: none;
             position: fixed;
@@ -87,26 +96,9 @@
             border: 4px solid #b71c1c;
         }
 
-        #result-modal h2 {
-            color: #b71c1c;
-            margin-top: 0;
-        }
-
-        #result-modal p {
-            font-size: 1.2rem;
-            font-weight: bold;
-            line-height: 1.6;
-        }
-
-        .modal-btn {
-            background: #b71c1c;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 10px;
-            margin-top: 15px;
-            font-size: 1rem;
-        }
+        #result-modal h2 { color: #b71c1c; margin-top: 0; }
+        #result-modal p { font-size: 1.2rem; font-weight: bold; line-height: 1.6; }
+        .modal-btn { background: #b71c1c; color: white; border: none; padding: 10px 20px; border-radius: 10px; margin-top: 15px; font-size: 1rem; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -136,42 +128,51 @@
         
         let clearedCount = 0;
         let winningSymbol = '';
+        const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 
-        // 所有連線的可能性索引 (九宮格 0-8)
-        const lines = [
-            [0, 1, 2], [3, 4, 5], [6, 7, 8], // 橫
-            [0, 3, 6], [1, 4, 7], [2, 5, 8], // 直
-            [0, 4, 8], [2, 4, 6]             // 斜
-        ];
+        // 粒子類別
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 3 + 1;
+                this.speedX = Math.random() * 2 - 1;
+                this.speedY = Math.random() * 2 - 1;
+                this.color = `rgba(255, ${215 + Math.random() * 40}, 0, ${Math.random() * 0.8 + 0.2})`; // 金色
+                this.life = 1; // 生命週期
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life -= 0.02;
+            }
+            draw(ctx) {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
 
         function initGame() {
             gridElement.innerHTML = '';
             clearedCount = 0;
             modal.style.display = 'none';
 
-            // 1. 隨機選一個符號當連線符號
             const keys = Object.keys(symbolsMap);
             winningSymbol = keys[Math.floor(Math.random() * keys.length)];
-
-            // 2. 隨機選一條線連起來
             const winLine = lines[Math.floor(Math.random() * lines.length)];
             
-            // 3. 準備九個格子的內容
             let board = new Array(9).fill(null);
             winLine.forEach(idx => board[idx] = winningSymbol);
 
-            // 4. 其他格子隨機填入 (且避免產生第二條線，這裡簡單處理填入不同符號)
             for (let i = 0; i < 9; i++) {
                 if (board[i] === null) {
                     let randomSym;
-                    do {
-                        randomSym = keys[Math.floor(Math.random() * keys.length)];
-                    } while (randomSym === winningSymbol); // 避免干擾視覺，非線格子不用連線符號
+                    do { randomSym = keys[Math.floor(Math.random() * keys.length)]; } while (randomSym === winningSymbol);
                     board[i] = randomSym;
                 }
             }
-
-            // 5. 生成格子
             board.forEach(sym => createScratchCard(sym));
         }
 
@@ -180,76 +181,100 @@
             card.className = 'scratch-card';
             card.innerHTML = `<span>${symbol}</span>`;
 
-            const canvas = document.createElement('canvas');
-            card.appendChild(canvas);
+            // 特效畫布
+            const pCanvas = document.createElement('canvas');
+            pCanvas.className = 'particle-canvas';
+            const pCtx = pCanvas.getContext('2d');
+            
+            // 刮除畫布
+            const sCanvas = document.createElement('canvas');
+            sCanvas.className = 'scratch-canvas';
+            const sCtx = sCanvas.getContext('2d');
+
+            card.appendChild(pCanvas);
+            card.appendChild(sCanvas);
             gridElement.appendChild(card);
 
-            const ctx = canvas.getContext('2d');
-            canvas.width = 90;
-            canvas.height = 80;
+            pCanvas.width = sCanvas.width = 90;
+            pCanvas.height = sCanvas.height = 80;
 
-            const gradient = ctx.createLinearGradient(0, 0, 90, 90);
+            // 繪製遮罩
+            const gradient = sCtx.createLinearGradient(0, 0, 90, 80);
             gradient.addColorStop(0, '#C0C0C0');
             gradient.addColorStop(1, '#A9A9A9');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, 90, 90);
+            sCtx.fillStyle = gradient;
+            sCtx.fillRect(0, 0, 90, 80);
 
+            let particles = [];
             let isDrawing = false;
             let isRemoved = false;
 
+            // 動態循環渲染粒子
+            function animate() {
+                pCtx.clearRect(0, 0, 90, 80);
+                for (let i = 0; i < particles.length; i++) {
+                    particles[i].update();
+                    particles[i].draw(pCtx);
+                    if (particles[i].life <= 0) {
+                        particles.splice(i, 1);
+                        i--;
+                    }
+                }
+                if (!isRemoved || particles.length > 0) {
+                    requestAnimationFrame(animate);
+                }
+            }
+            animate();
+
             function scratch(e) {
                 if (!isDrawing || isRemoved) return;
-                const rect = canvas.getBoundingClientRect();
+                const rect = sCanvas.getBoundingClientRect();
                 const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
                 const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
 
-                ctx.globalCompositeOperation = 'destination-out';
-                ctx.beginPath();
-                ctx.arc(x, y, 18, 0, Math.PI * 2);
-                ctx.fill();
-                checkScratchPercent(canvas, ctx);
+                // 產生金粉粒子
+                for (let i = 0; i < 5; i++) {
+                    particles.push(new Particle(x, y));
+                }
+
+                sCtx.globalCompositeOperation = 'destination-out';
+                sCtx.beginPath();
+                sCtx.arc(x, y, 18, 0, Math.PI * 2);
+                sCtx.fill();
+                checkScratchPercent(sCanvas, sCtx);
             }
 
             function checkScratchPercent(canvas, ctx) {
                 if (isRemoved) return;
-                const imageData = ctx.getImageData(0, 0, 90, 90);
+                const imageData = ctx.getImageData(0, 0, 90, 80);
                 const pixels = imageData.data;
                 let transparentPixels = 0;
                 for (let i = 0; i < pixels.length; i += 4) {
                     if (pixels[i + 3] < 150) transparentPixels++;
                 }
-                
-                if ((transparentPixels / (90 * 90)) > 0.55) {
+                if ((transparentPixels / (90 * 80)) > 0.55) {
                     isRemoved = true;
                     canvas.style.opacity = '0';
                     clearedCount++;
                     setTimeout(() => canvas.remove(), 400);
-
-                    if (clearedCount === 9) {
-                        showResult();
-                    }
+                    if (clearedCount === 9) showResult();
                 }
             }
 
-            canvas.addEventListener('mousedown', () => isDrawing = true);
-            canvas.addEventListener('touchstart', (e) => { isDrawing = true; e.preventDefault(); });
+            sCanvas.addEventListener('mousedown', () => isDrawing = true);
+            sCanvas.addEventListener('touchstart', (e) => { isDrawing = true; e.preventDefault(); });
             window.addEventListener('mouseup', () => isDrawing = false);
             window.addEventListener('touchend', () => isDrawing = false);
-            canvas.addEventListener('mousemove', scratch);
-            canvas.addEventListener('touchmove', (e) => { scratch(e); e.preventDefault(); });
+            sCanvas.addEventListener('mousemove', scratch);
+            sCanvas.addEventListener('touchmove', (e) => { scratch(e); e.preventDefault(); });
         }
 
         function showResult() {
             modalText.innerText = symbolsMap[winningSymbol];
-            setTimeout(() => {
-                modal.style.display = 'block';
-            }, 500);
+            setTimeout(() => { modal.style.display = 'block'; }, 500);
         }
 
-        function closeModal() {
-            initGame();
-        }
-
+        function closeModal() { initGame(); }
         initGame();
     </script>
 </body>

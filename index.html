@@ -1,310 +1,292 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta property="og:title" content="點我刮大獎！財神點名刮刮樂">
-    <meta property="og:description" content="馬上刮,馬上中">
-    <title>財神點名刮刮樂</title>
-    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <style>
-        :root {
-            --bg-festive: #d32f2f;
-            --gold: #ffd700;
-        }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta property="og:title" content="點我刮大獎！財神點名刮刮樂">
+    <meta property="og:description" content="馬上刮,馬上中">
+    <meta property="og:image" content="https://hsiao523.github.io/happynewyear9/title.jpg">
+    <title>財神點名刮刮樂</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+        }
 
-        * {
-            box-sizing: border-box;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
-        }
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background: url('https://hsiao523.github.io/happynewyear9/background.jpg') no-repeat center center;
+            background-size: cover;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            overflow: hidden;
+            touch-action: none;
+            font-family: "Microsoft JhengHei", sans-serif;
+        }
 
-        body {
-            margin: 0;
-            padding: 0;
-            width: 100vw;
-            height: 100vh;
-            background: radial-gradient(circle, #ff5252 0%, #b71c1c 100%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            touch-action: none;
-            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
-        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 90px);
+            grid-template-rows: repeat(3, 80px);
+            gap: 6px;
+            padding: 15px;
+            margin-top: 52vh;
+            background: rgba(0, 0, 0, 0.1); 
+            border-radius: 15px;
+            position: relative;
+        }
 
-        .header {
-            color: var(--gold);
-            text-align: center;
-            margin-bottom: 20px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
+        .scratch-card {
+            position: relative;
+            width: 90px;
+            height: 80px;
+            background: #fff3e0;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
 
-        .header h1 { margin: 0; font-size: 1.8rem; }
-        .header p { margin: 5px 0 0; opacity: 0.9; font-size: 0.9rem; }
+        .particle-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 3;
+        }
 
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(5px);
-            border-radius: 15px;
-            border: 2px solid var(--gold);
-            width: 90vw;
-            max-width: 350px;
-            position: relative;
-        }
+        .scratch-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            touch-action: none;
+            border-radius: 10px;
+            transition: opacity 0.4s ease;
+            z-index: 2;
+        }
 
-        .scratch-card {
-            position: relative;
-            aspect-ratio: 1 / 1;
-            background: #fff;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
+        #result-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.98);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6);
+            z-index: 1000;
+            text-align: center;
+            width: 85%;
+            max-width: 320px;
+            border: 5px solid #d32f2f;
+        }
 
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            touch-action: none;
-            z-index: 2;
-        }
-
-        .scratch-canvas {
-            transition: opacity 0.5s ease;
-        }
-
-        /* 結果視窗 */
-        #result-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            text-align: center;
-            width: 80%;
-            max-width: 300px;
-            border: 4px solid var(--gold);
-            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        @keyframes popIn {
-            0% { transform: scale(0.5); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        .modal-btn {
-            background: var(--bg-festive);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            margin-top: 20px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            box-shadow: 0 4px 0 #8e1b1b;
-            cursor: pointer;
-        }
-    </style>
+        #modal-title { color: #d32f2f; font-size: 1.5rem; margin-bottom: 10px; font-weight: bold; }
+        #modal-text { font-size: 1.3rem; font-weight: bold; line-height: 1.6; color: #333; }
+        .modal-btn { background: #d32f2f; color: white; border: none; padding: 12px 25px; border-radius: 50px; margin-top: 20px; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
+    </style>
 </head>
 <body>
 
-    <audio id="bgm" src="bgm.mp3" loop playsinline></audio>
-    <audio id="winSound" src="win.mp3" playsinline></audio>
+    <div class="grid-container" id="grid"></div>
 
-    <div class="header">
-        <h1>🧧 財神點名刮刮樂</h1>
-        <p>刮開 3x3 網格，驚喜大獎等你拿</p>
-    </div>
+    <div id="result-modal">
+        <div id="modal-emoji" style="font-size: 3.5rem; margin-bottom: 10px;">🎊</div>
+        <div id="modal-title">財神報喜</div>
+        <div id="modal-text"></div>
+        <button class="modal-btn" onclick="closeModal()">再玩一次</button>
+    </div>
 
-    <div class="grid-container" id="grid"></div>
+    <script>
+        // 【設定區 1】一般賀詞 (只寫後半段祝賀語)
+        // 程式會自動在前面加上 "刮中 (n) 個 (符號)，"
+        const normalMap = {
+            '💰': "今年賺大錢！",
+            '🧧': "今年紅利領不完！",
+            '💎': "金銀珠寶滿厝間！",
+            '🍊': "大吉大利發大財！",
+            '✨': "今年運勢亮晶晶！",
+            '🍍': "今年年頭旺到年尾！",
+            '🧨': "天天中大獎，鞕炮響不停！"
+        };
 
-    <div id="result-modal">
-        <div class="modal-content">
-            <div id="modal-emoji" style="font-size: 4rem;">🎊</div>
-            <h2 id="modal-title" style="color:#d32f2f; margin:10px 0;">財神報喜</h2>
-            <p id="modal-text" style="font-size: 1.2rem; color:#333; line-height: 1.6; font-weight: bold;"></p>
-            <button class="modal-btn" onclick="initGame()">再刮一張</button>
-        </div>
-    </div>
+        // 【設定區 2】9 個全中時的特別賀詞 (不受影響，顯示完整句子)
+        const superMap = {
+            '💰': "【終極財神】9個💰全開！富甲天下！",
+            '🧧': "【紅包之王】9個🧧全開！財庫滿盈！",
+            '💎': "【至尊珠寶】9個💎全開！富貴一生！",
+            '🍊': "【超級大吉】9個🍊全開！萬事大亨通！",
+            '✨': "【神光普照】9個✨全開！運勢無敵強！",
+            '🍍': "【超級旺來】9個🍍全開！好運爆棚了！",
+            '🧨': "【大獎臨門】9個🧨全開！驚喜連連發！"
+        };
 
-    <script>
-        const normalMap = {
-            '💰': "今年賺大錢！",
-            '🧧': "紅包領不完！",
-            '💎': "富貴滿厝間！",
-            '🍊': "大吉又大利！",
-            '✨': "運勢亮晶晶！",
-            '🍍': "旺來好運到！"
-        };
+        const gridElement = document.getElementById('grid');
+        const modal = document.getElementById('result-modal');
+        const modalText = document.getElementById('modal-text');
+        
+        let clearedCount = 0;
+        let winner = { symbol: '', count: 0 };
 
-        const gridElement = document.getElementById('grid');
-        const modal = document.getElementById('result-modal');
-        const bgm = document.getElementById('bgm');
-        const winSound = document.getElementById('winSound');
-        
-        let clearedCount = 0;
-        let winner = { symbol: '', count: 0 };
-        let isMusicPlaying = false;
+        // 金粉粒子特效
+        class Particle {
+            constructor(x, y) {
+                this.x = x; this.y = y;
+                this.size = Math.random() * 3 + 1;
+                this.speedX = Math.random() * 2 - 1;
+                this.speedY = Math.random() * 2 - 1;
+                this.color = `rgba(255, ${215 + Math.random() * 40}, 0, ${Math.random() * 0.8 + 0.2})`;
+                this.life = 1;
+            }
+            update() { this.x += this.speedX; this.y += this.speedY; this.life -= 0.02; }
+            draw(ctx) { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
+        }
 
-        // 初始化遊戲
-        function initGame() {
-            gridElement.innerHTML = '';
-            clearedCount = 0;
-            modal.style.display = 'none';
-            winSound.pause();
-            winSound.currentTime = 0;
+        function initGame() {
+            gridElement.innerHTML = '';
+            clearedCount = 0;
+            modal.style.display = 'none';
 
-            const symbols = Object.keys(normalMap);
-            const targetSymbol = symbols[Math.floor(Math.random() * symbols.length)];
-            const targetCount = Math.floor(Math.random() * 4) + 5; // 隨機出現 5~8 個
+            const keys = Object.keys(normalMap);
+            // 設定機率：隨機決定這次會出現幾個相同符號 (5, 6, 8, 或 9)
+            const countsToPick = [5, 6, 8, 9];
+            const targetCount = countsToPick[Math.floor(Math.random() * countsToPick.length)];
+            const targetSymbol = keys[Math.floor(Math.random() * keys.length)];
+            
+            winner = { symbol: targetSymbol, count: targetCount };
 
-            winner = { symbol: targetSymbol, count: targetCount };
+            let board = new Array(9).fill(null);
+            // 隨機分配位置
+            let indices = [0,1,2,3,4,5,6,7,8].sort(() => Math.random() - 0.5);
+            
+            // 填入中獎符號
+            for(let i=0; i < targetCount; i++) {
+                board[indices[i]] = targetSymbol;
+            }
 
-            let board = new Array(9).fill(null);
-            let indices = [...Array(9).keys()].sort(() => Math.random() - 0.5);
-            
-            for(let i=0; i<9; i++) {
-                board[indices[i]] = i < targetCount ? targetSymbol : symbols.find(s => s !== targetSymbol);
-            }
+            // 填入其他雜訊符號
+            for(let i=0; i<9; i++) {
+                if(board[i] === null) {
+                    let randomSym;
+                    do {
+                        randomSym = keys[Math.floor(Math.random() * keys.length)];
+                    } while (randomSym === targetSymbol);
+                    board[i] = randomSym;
+                }
+            }
+            board.forEach(sym => createScratchCard(sym));
+        }
 
-            board.forEach(sym => createCard(sym));
-            
-            // 重新開始後，如果音樂已經啟動過則恢復播放
-            if(isMusicPlaying) bgm.play();
-        }
+        function createScratchCard(symbol) {
+            const card = document.createElement('div');
+            card.className = 'scratch-card';
+            card.innerHTML = `<span>${symbol}</span>`;
 
-        function createCard(symbol) {
-            const card = document.createElement('div');
-            card.className = 'scratch-card';
-            card.innerHTML = `<span>${symbol}</span>`;
+            const pCanvas = document.createElement('canvas');
+            pCanvas.className = 'particle-canvas';
+            const pCtx = pCanvas.getContext('2d');
+            
+            const sCanvas = document.createElement('canvas');
+            sCanvas.className = 'scratch-canvas';
+            const sCtx = sCanvas.getContext('2d');
 
-            const sCanvas = document.createElement('canvas');
-            sCanvas.className = 'scratch-canvas';
-            const ctx = sCanvas.getContext('2d');
+            card.appendChild(pCanvas);
+            card.appendChild(sCanvas);
+            gridElement.appendChild(card);
 
-            card.appendChild(sCanvas);
-            gridElement.appendChild(card);
+            pCanvas.width = sCanvas.width = 90;
+            pCanvas.height = sCanvas.height = 80;
 
-            // 確保畫布尺寸正確
-            const rect = card.getBoundingClientRect();
-            sCanvas.width = rect.width || 100;
-            sCanvas.height = rect.height || 100;
-            
-            // 繪製灰色遮罩
-            ctx.fillStyle = '#C0C0C0';
-            ctx.fillRect(0, 0, sCanvas.width, sCanvas.height);
+            const gradient = sCtx.createLinearGradient(0, 0, 90, 80);
+            gradient.addColorStop(0, '#C0C0C0');
+            gradient.addColorStop(1, '#A9A9A9');
+            sCtx.fillStyle = gradient;
+            sCtx.fillRect(0, 0, 90, 80);
 
-            let isDrawing = false;
-            let lastX, lastY;
+            let particles = [];
+            let isDrawing = false;
+            let isRemoved = false;
 
-            function getPos(e) {
-                const r = sCanvas.getBoundingClientRect();
-                const cx = e.touches ? e.touches[0].clientX : e.clientX;
-                const cy = e.touches ? e.touches[0].clientY : e.clientY;
-                return { x: cx - r.left, y: cy - r.top };
-            }
+            function animate() {
+                pCtx.clearRect(0, 0, 90, 80);
+                particles.forEach((p, i) => {
+                    p.update(); p.draw(pCtx);
+                    if (p.life <= 0) particles.splice(i, 1);
+                });
+                if (!isRemoved || particles.length > 0) requestAnimationFrame(animate);
+            }
+            animate();
 
-            function startDrawing(e) {
-                // 首次觸碰時播放音樂（解決瀏覽器政策）
-                if(!isMusicPlaying) {
-                    bgm.play().catch(err => console.log("BGM 待互動播放"));
-                    isMusicPlaying = true;
-                }
-                isDrawing = true;
-                const pos = getPos(e);
-                lastX = pos.x;
-                lastY = pos.y;
-            }
+            function scratch(e) {
+                if (!isDrawing || isRemoved) return;
+                const rect = sCanvas.getBoundingClientRect();
+                const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+                const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+                for (let i = 0; i < 5; i++) particles.push(new Particle(x, y));
+                sCtx.globalCompositeOperation = 'destination-out';
+                sCtx.beginPath();
+                sCtx.arc(x, y, 18, 0, Math.PI * 2);
+                sCtx.fill();
+                checkScratchPercent(sCanvas, sCtx);
+            }
 
-            function scratch(e) {
-                if (!isDrawing) return;
-                const pos = getPos(e);
-                
-                ctx.globalCompositeOperation = 'destination-out';
-                ctx.lineJoin = 'round';
-                ctx.lineCap = 'round';
-                ctx.lineWidth = 30;
+            function checkScratchPercent(canvas, ctx) {
+                if (isRemoved) return;
+                const imageData = ctx.getImageData(0, 0, 90, 80);
+                const pixels = imageData.data;
+                let transparentPixels = 0;
+                for (let i = 0; i < pixels.length; i += 4) if (pixels[i + 3] < 150) transparentPixels++;
+                
+                if ((transparentPixels / (90 * 80)) > 0.55) {
+                    isRemoved = true;
+                    canvas.style.opacity = '0';
+                    clearedCount++;
+                    setTimeout(() => canvas.remove(), 400);
+                    if (clearedCount === 9) showResult();
+                }
+            }
 
-                ctx.beginPath();
-                ctx.moveTo(lastX, lastY);
-                ctx.lineTo(pos.x, pos.y);
-                ctx.stroke();
+            sCanvas.addEventListener('mousedown', () => isDrawing = true);
+            sCanvas.addEventListener('touchstart', (e) => { isDrawing = true; e.preventDefault(); });
+            window.addEventListener('mouseup', () => isDrawing = false);
+            window.addEventListener('touchend', () => isDrawing = false);
+            sCanvas.addEventListener('mousemove', scratch);
+            sCanvas.addEventListener('touchmove', (e) => { scratch(e); e.preventDefault(); });
+        }
 
-                lastX = pos.x;
-                lastY = pos.y;
-            }
+        // 【重點修改區】：顯示結果的邏輯
+        function showResult() {
+            const emojiEl = document.getElementById('modal-emoji');
+            
+            if (winner.count === 9) {
+                // 9 個全中：使用特別賀詞 (文字直接取自 superMap)
+                modalText.innerText = superMap[winner.symbol];
+                emojiEl.innerText = "🧧";
+            } else {
+                // 一般中獎 (5, 6, 8 個)：
+                // 這裡會自動組合成：「刮中 (數量) 個 (符號)，(吉祥話)」
+                modalText.innerText = `刮中${winner.count}個${winner.symbol}，${normalMap[winner.symbol]}`;
+                emojiEl.innerText = "🎊";
+            }
+            
+            setTimeout(() => { modal.style.display = 'block'; }, 500);
+        }
 
-            function stopDrawing() {
-                if(!isDrawing) return;
-                isDrawing = false;
-                checkArea(sCanvas, ctx);
-            }
-
-            // 事件監聽
-            sCanvas.addEventListener('mousedown', startDrawing);
-            sCanvas.addEventListener('mousemove', scratch);
-            window.addEventListener('mouseup', stopDrawing);
-
-            sCanvas.addEventListener('touchstart', (e) => { startDrawing(e); e.preventDefault(); }, {passive: false});
-            sCanvas.addEventListener('touchmove', (e) => { scratch(e); e.preventDefault(); }, {passive: false});
-            sCanvas.addEventListener('touchend', stopDrawing);
-        }
-
-        function checkArea(canvas, ctx) {
-            if (canvas.style.opacity === '0') return;
-            
-            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-            let transparent = 0;
-            for (let i = 3; i < data.length; i += 4) {
-                if (data[i] === 0) transparent++;
-            }
-            
-            // 刮開超過 60%
-            if (transparent / (canvas.width * canvas.height) > 0.6) {
-                canvas.style.opacity = '0';
-                clearedCount++;
-                setTimeout(() => canvas.remove(), 500);
-                
-                if (clearedCount === 9) showResult();
-            }
-        }
-
-        function showResult() {
-            bgm.pause(); // 停止背景音
-            winSound.play(); // 播放中獎音
-            
-            document.getElementById('modal-text').innerText = `刮中 ${winner.count} 個 ${winner.symbol}\n${normalMap[winner.symbol]}`;
-            setTimeout(() => {
-                modal.style.display = 'flex';
-            }, 600);
-        }
-
-        // 初始化 LIFF
-        liff.init({ liffId: "YOUR_LIFF_ID" }).catch(err => console.error("LIFF SDK 載入中"));
-        
-        // 啟動遊戲
-        window.onload = initGame;
-    </script>
+        function closeModal() { initGame(); }
+        initGame();
+    </script>
 </body>
 </html>

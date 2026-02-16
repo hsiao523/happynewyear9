@@ -94,8 +94,8 @@
             border: 5px solid #d32f2f;
         }
 
-        #modal-title { color: #d32f2f; font-size: 1.5rem; margin-bottom: 10px; }
-        #modal-text { font-size: 1.2rem; font-weight: bold; line-height: 1.5; color: #333; }
+        #modal-title { color: #d32f2f; font-size: 1.5rem; margin-bottom: 10px; font-weight: bold; }
+        #modal-text { font-size: 1.3rem; font-weight: bold; line-height: 1.6; color: #333; }
         .modal-btn { background: #d32f2f; color: white; border: none; padding: 12px 25px; border-radius: 50px; margin-top: 20px; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
     </style>
 </head>
@@ -111,18 +111,19 @@
     </div>
 
     <script>
-        // 1. 一般賀詞 (5, 6, 8 個時觸發)
+        // 【設定區 1】一般賀詞 (只寫後半段祝賀語)
+        // 程式會自動在前面加上 "刮中 (n) 個 (符號)，"
         const normalMap = {
-            '💰': "出現了！今年賺大錢！",
-            '🧧': "好運到！今年紅利領不完！",
-            '💎': "亮閃閃！金銀珠寶滿厝間！",
-            '🍊': "大吉利！大吉大利發大財！",
-            '✨': "閃亮亮！今年運勢亮晶晶！",
-            '🍍': "旺旺來！今年年頭旺到年尾！",
-            '🧨': "響叮噹！天天中大獎，鞕炮響不停！"
+            '💰': "今年賺大錢！",
+            '🧧': "今年紅利領不完！",
+            '💎': "金銀珠寶滿厝間！",
+            '🍊': "大吉大利發大財！",
+            '✨': "今年運勢亮晶晶！",
+            '🍍': "今年年頭旺到年尾！",
+            '🧨': "天天中大獎，鞕炮響不停！"
         };
 
-        // 2. 終極賀詞 (9 個全中時觸發)
+        // 【設定區 2】9 個全中時的特別賀詞 (不受影響，顯示完整句子)
         const superMap = {
             '💰': "【終極財神】9個💰全開！富甲天下！",
             '🧧': "【紅包之王】9個🧧全開！財庫滿盈！",
@@ -140,7 +141,7 @@
         let clearedCount = 0;
         let winner = { symbol: '', count: 0 };
 
-        // 粒子類別 (金粉特效)
+        // 金粉粒子特效
         class Particle {
             constructor(x, y) {
                 this.x = x; this.y = y;
@@ -159,8 +160,8 @@
             clearedCount = 0;
             modal.style.display = 'none';
 
-            // --- 核心逻辑：生成中奖分布 ---
             const keys = Object.keys(normalMap);
+            // 設定機率：隨機決定這次會出現幾個相同符號 (5, 6, 8, 或 9)
             const countsToPick = [5, 6, 8, 9];
             const targetCount = countsToPick[Math.floor(Math.random() * countsToPick.length)];
             const targetSymbol = keys[Math.floor(Math.random() * keys.length)];
@@ -168,14 +169,15 @@
             winner = { symbol: targetSymbol, count: targetCount };
 
             let board = new Array(9).fill(null);
-            
-            // 先填入目標數量的 Symbol
+            // 隨機分配位置
             let indices = [0,1,2,3,4,5,6,7,8].sort(() => Math.random() - 0.5);
+            
+            // 填入中獎符號
             for(let i=0; i < targetCount; i++) {
                 board[indices[i]] = targetSymbol;
             }
 
-            // 剩下格子填入隨機 Symbol (不超過主角數量)
+            // 填入其他雜訊符號
             for(let i=0; i<9; i++) {
                 if(board[i] === null) {
                     let randomSym;
@@ -185,7 +187,6 @@
                     board[i] = randomSym;
                 }
             }
-
             board.forEach(sym => createScratchCard(sym));
         }
 
@@ -266,15 +267,18 @@
             sCanvas.addEventListener('touchmove', (e) => { scratch(e); e.preventDefault(); });
         }
 
+        // 【重點修改區】：顯示結果的邏輯
         function showResult() {
             const emojiEl = document.getElementById('modal-emoji');
             
-            // 判斷是否為 9 個全中模式
             if (winner.count === 9) {
+                // 9 個全中：使用特別賀詞 (文字直接取自 superMap)
                 modalText.innerText = superMap[winner.symbol];
-                emojiEl.innerText = "🧧"; // 全中改用特別圖示
+                emojiEl.innerText = "🧧";
             } else {
-                modalText.innerText = normalMap[winner.symbol];
+                // 一般中獎 (5, 6, 8 個)：
+                // 這裡會自動組合成：「刮中 (數量) 個 (符號)，(吉祥話)」
+                modalText.innerText = `刮中${winner.count}個${winner.symbol}，${normalMap[winner.symbol]}`;
                 emojiEl.innerText = "🎊";
             }
             

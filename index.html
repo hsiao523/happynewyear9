@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta property="og:title" content="點我刮大獎！財神到刮刮樂">
-    <meta property="og:description" content="馬上來刮刮,財神到你家！">
+    <meta property="og:title" content="點我刮大獎！財神點名刮刮樂">
+    <meta property="og:description" content="看看哪個開運小物出現最多次？">
     <meta property="og:image" content="https://hsiao523.github.io/happynewyear9/title.jpg">
-    <title>財神到刮刮樂</title>
+    <title>財神點名刮刮樂</title>
     <style>
         * {
             box-sizing: border-box;
@@ -54,18 +54,16 @@
             box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
         }
 
-        /* 底部畫布：負責粒子特效 */
         .particle-canvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none; /* 不干擾觸控 */
+            pointer-events: none;
             z-index: 3;
         }
 
-        /* 頂部畫布：負責刮除遮罩 */
         .scratch-canvas {
             position: absolute;
             top: 0;
@@ -85,20 +83,20 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(255, 255, 255, 0.95);
-            padding: 30px;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 25px;
             border-radius: 20px;
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
-            z-index: 100;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6);
+            z-index: 1000;
             text-align: center;
-            width: 80%;
-            max-width: 300px;
-            border: 4px solid #b71c1c;
+            width: 85%;
+            max-width: 320px;
+            border: 5px solid #d32f2f;
         }
 
-        #result-modal h2 { color: #b71c1c; margin-top: 0; }
-        #result-modal p { font-size: 1.2rem; font-weight: bold; line-height: 1.6; }
-        .modal-btn { background: #b71c1c; color: white; border: none; padding: 10px 20px; border-radius: 10px; margin-top: 15px; font-size: 1rem; cursor: pointer; }
+        #modal-title { color: #d32f2f; font-size: 1.5rem; margin-bottom: 10px; }
+        #modal-text { font-size: 1.2rem; font-weight: bold; line-height: 1.5; color: #333; }
+        .modal-btn { background: #d32f2f; color: white; border: none; padding: 12px 25px; border-radius: 50px; margin-top: 20px; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -106,20 +104,33 @@
     <div class="grid-container" id="grid"></div>
 
     <div id="result-modal">
-        <h2 id="modal-title">恭喜！</h2>
-        <p id="modal-text"></p>
+        <div id="modal-emoji" style="font-size: 3.5rem; margin-bottom: 10px;">🎊</div>
+        <div id="modal-title">財神報喜</div>
+        <div id="modal-text"></div>
         <button class="modal-btn" onclick="closeModal()">再玩一次</button>
     </div>
 
     <script>
-        const symbolsMap = {
-            '💰': "刮中💰，今年賺大錢！",
-            '🧧': "刮中🧧，今年紅利領不完！",
-            '💎': "刮中💎，金銀珠寶滿厝間！",
-            '🍊': "刮中🍊，大吉大利發大財！",
-            '✨': "刮中✨，今年運勢亮晶晶，好運一直來！",
-            '🍍': "刮中🍍，今年會年頭旺到年尾！",
-            '🧨': "刮中🧨，天天中大獎，鞕炮響不停！"
+        // 1. 一般賀詞 (5, 6, 8 個時觸發)
+        const normalMap = {
+            '💰': "出現了！今年賺大錢！",
+            '🧧': "好運到！今年紅利領不完！",
+            '💎': "亮閃閃！金銀珠寶滿厝間！",
+            '🍊': "大吉利！大吉大利發大財！",
+            '✨': "閃亮亮！今年運勢亮晶晶！",
+            '🍍': "旺旺來！今年年頭旺到年尾！",
+            '🧨': "響叮噹！天天中大獎，鞕炮響不停！"
+        };
+
+        // 2. 終極賀詞 (9 個全中時觸發)
+        const superMap = {
+            '💰': "【終極財神】9個💰全開！富甲天下！",
+            '🧧': "【紅包之王】9個🧧全開！財庫滿盈！",
+            '💎': "【至尊珠寶】9個💎全開！富貴一生！",
+            '🍊': "【超級大吉】9個🍊全開！萬事大亨通！",
+            '✨': "【神光普照】9個✨全開！運勢無敵強！",
+            '🍍': "【超級旺來】9個🍍全開！好運爆棚了！",
+            '🧨': "【大獎臨門】9個🧨全開！驚喜連連發！"
         };
 
         const gridElement = document.getElementById('grid');
@@ -127,31 +138,20 @@
         const modalText = document.getElementById('modal-text');
         
         let clearedCount = 0;
-        let winningSymbol = '';
-        const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+        let winner = { symbol: '', count: 0 };
 
-        // 粒子類別
+        // 粒子類別 (金粉特效)
         class Particle {
             constructor(x, y) {
-                this.x = x;
-                this.y = y;
+                this.x = x; this.y = y;
                 this.size = Math.random() * 3 + 1;
                 this.speedX = Math.random() * 2 - 1;
                 this.speedY = Math.random() * 2 - 1;
-                this.color = `rgba(255, ${215 + Math.random() * 40}, 0, ${Math.random() * 0.8 + 0.2})`; // 金色
-                this.life = 1; // 生命週期
+                this.color = `rgba(255, ${215 + Math.random() * 40}, 0, ${Math.random() * 0.8 + 0.2})`;
+                this.life = 1;
             }
-            update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
-                this.life -= 0.02;
-            }
-            draw(ctx) {
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            update() { this.x += this.speedX; this.y += this.speedY; this.life -= 0.02; }
+            draw(ctx) { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
         }
 
         function initGame() {
@@ -159,20 +159,33 @@
             clearedCount = 0;
             modal.style.display = 'none';
 
-            const keys = Object.keys(symbolsMap);
-            winningSymbol = keys[Math.floor(Math.random() * keys.length)];
-            const winLine = lines[Math.floor(Math.random() * lines.length)];
+            // --- 核心逻辑：生成中奖分布 ---
+            const keys = Object.keys(normalMap);
+            const countsToPick = [5, 6, 8, 9];
+            const targetCount = countsToPick[Math.floor(Math.random() * countsToPick.length)];
+            const targetSymbol = keys[Math.floor(Math.random() * keys.length)];
             
-            let board = new Array(9).fill(null);
-            winLine.forEach(idx => board[idx] = winningSymbol);
+            winner = { symbol: targetSymbol, count: targetCount };
 
-            for (let i = 0; i < 9; i++) {
-                if (board[i] === null) {
+            let board = new Array(9).fill(null);
+            
+            // 先填入目標數量的 Symbol
+            let indices = [0,1,2,3,4,5,6,7,8].sort(() => Math.random() - 0.5);
+            for(let i=0; i < targetCount; i++) {
+                board[indices[i]] = targetSymbol;
+            }
+
+            // 剩下格子填入隨機 Symbol (不超過主角數量)
+            for(let i=0; i<9; i++) {
+                if(board[i] === null) {
                     let randomSym;
-                    do { randomSym = keys[Math.floor(Math.random() * keys.length)]; } while (randomSym === winningSymbol);
+                    do {
+                        randomSym = keys[Math.floor(Math.random() * keys.length)];
+                    } while (randomSym === targetSymbol);
                     board[i] = randomSym;
                 }
             }
+
             board.forEach(sym => createScratchCard(sym));
         }
 
@@ -181,12 +194,10 @@
             card.className = 'scratch-card';
             card.innerHTML = `<span>${symbol}</span>`;
 
-            // 特效畫布
             const pCanvas = document.createElement('canvas');
             pCanvas.className = 'particle-canvas';
             const pCtx = pCanvas.getContext('2d');
             
-            // 刮除畫布
             const sCanvas = document.createElement('canvas');
             sCanvas.className = 'scratch-canvas';
             const sCtx = sCanvas.getContext('2d');
@@ -198,7 +209,6 @@
             pCanvas.width = sCanvas.width = 90;
             pCanvas.height = sCanvas.height = 80;
 
-            // 繪製遮罩
             const gradient = sCtx.createLinearGradient(0, 0, 90, 80);
             gradient.addColorStop(0, '#C0C0C0');
             gradient.addColorStop(1, '#A9A9A9');
@@ -209,20 +219,13 @@
             let isDrawing = false;
             let isRemoved = false;
 
-            // 動態循環渲染粒子
             function animate() {
                 pCtx.clearRect(0, 0, 90, 80);
-                for (let i = 0; i < particles.length; i++) {
-                    particles[i].update();
-                    particles[i].draw(pCtx);
-                    if (particles[i].life <= 0) {
-                        particles.splice(i, 1);
-                        i--;
-                    }
-                }
-                if (!isRemoved || particles.length > 0) {
-                    requestAnimationFrame(animate);
-                }
+                particles.forEach((p, i) => {
+                    p.update(); p.draw(pCtx);
+                    if (p.life <= 0) particles.splice(i, 1);
+                });
+                if (!isRemoved || particles.length > 0) requestAnimationFrame(animate);
             }
             animate();
 
@@ -231,12 +234,7 @@
                 const rect = sCanvas.getBoundingClientRect();
                 const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
                 const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-
-                // 產生金粉粒子
-                for (let i = 0; i < 5; i++) {
-                    particles.push(new Particle(x, y));
-                }
-
+                for (let i = 0; i < 5; i++) particles.push(new Particle(x, y));
                 sCtx.globalCompositeOperation = 'destination-out';
                 sCtx.beginPath();
                 sCtx.arc(x, y, 18, 0, Math.PI * 2);
@@ -249,9 +247,8 @@
                 const imageData = ctx.getImageData(0, 0, 90, 80);
                 const pixels = imageData.data;
                 let transparentPixels = 0;
-                for (let i = 0; i < pixels.length; i += 4) {
-                    if (pixels[i + 3] < 150) transparentPixels++;
-                }
+                for (let i = 0; i < pixels.length; i += 4) if (pixels[i + 3] < 150) transparentPixels++;
+                
                 if ((transparentPixels / (90 * 80)) > 0.55) {
                     isRemoved = true;
                     canvas.style.opacity = '0';
@@ -270,7 +267,17 @@
         }
 
         function showResult() {
-            modalText.innerText = symbolsMap[winningSymbol];
+            const emojiEl = document.getElementById('modal-emoji');
+            
+            // 判斷是否為 9 個全中模式
+            if (winner.count === 9) {
+                modalText.innerText = superMap[winner.symbol];
+                emojiEl.innerText = "🧧"; // 全中改用特別圖示
+            } else {
+                modalText.innerText = normalMap[winner.symbol];
+                emojiEl.innerText = "🎊";
+            }
+            
             setTimeout(() => { modal.style.display = 'block'; }, 500);
         }
 
